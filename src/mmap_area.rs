@@ -84,13 +84,13 @@ impl<'a, T: std::default::Default + std::marker::Copy> MmapArea<'a, T> {
 
         // Create the bufs
         let mut bufs = Vec::with_capacity(buf_num);
-        let buf_len_available = buf_len - AF_XDP_RESERVED as usize;
+        let buf_len_available = buf_len as usize;
 
         for i in 0..buf_num {
             let buf: BufMmap<T>;
             unsafe {
                 // addr is the offset into the memory mapped area
-                let addr = (i * buf_len) as u64 + AF_XDP_RESERVED as u64;
+                let addr = (i * buf_len) as u64;
                 let ptr = ma.ptr.offset(addr as isize);
 
                 buf = BufMmap::<T> {
@@ -98,6 +98,7 @@ impl<'a, T: std::default::Default + std::marker::Copy> MmapArea<'a, T> {
                     len: 0,
                     data: std::slice::from_raw_parts_mut(ptr as *mut u8, buf_len_available),
                     user: Default::default(),
+                    headroom: AF_XDP_RESERVED.try_into().unwrap()
                 };
             }
 

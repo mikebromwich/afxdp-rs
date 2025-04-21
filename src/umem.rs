@@ -185,7 +185,7 @@ impl<'a, T: std::default::Default + std::marker::Copy> UmemCompletionQueue<'a, T
             // +256 (AF_XDP_RESERVED) into the buffer.
             unsafe {
                 let raw_addr = _xsk_ring_cons__comp_addr(self.cq.as_mut(), idx);
-                let addr = *raw_addr;
+                let addr = *raw_addr - AF_XDP_RESERVED;
                 let ptr = self.umem.area.get_ptr().offset(addr as isize);
                 idx += 1;
 
@@ -194,6 +194,7 @@ impl<'a, T: std::default::Default + std::marker::Copy> UmemCompletionQueue<'a, T
                     len: 0,
                     data: std::slice::from_raw_parts_mut(ptr as *mut u8, buf_len_available),
                     user: Default::default(),
+                    headroom: AF_XDP_RESERVED.try_into().unwrap()
                 };
             }
 

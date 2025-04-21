@@ -382,7 +382,7 @@ impl<'a, T: std::default::Default + std::marker::Copy> SocketRx<'a, T> {
             return Ok(0);
         }
 
-        let buf_len_available = self.socket.umem.area.get_buf_len() - AF_XDP_RESERVED as usize;
+        let buf_len_available = self.socket.umem.area.get_buf_len() as usize;
 
         for _ in 0..rcvd {
             let desc: *const xdp_desc;
@@ -390,7 +390,7 @@ impl<'a, T: std::default::Default + std::marker::Copy> SocketRx<'a, T> {
 
             unsafe {
                 desc = _xsk_ring_cons__rx_desc(self.rx.as_mut(), idx_rx);
-                let addr = (*desc).addr;
+                let addr = (*desc).addr - AF_XDP_RESERVED;
                 let len = (*desc).len.try_into().unwrap();
                 let ptr = self.socket.umem.area.get_ptr().offset(addr as isize);
 
@@ -399,6 +399,7 @@ impl<'a, T: std::default::Default + std::marker::Copy> SocketRx<'a, T> {
                     len,
                     data: std::slice::from_raw_parts_mut(ptr as *mut u8, buf_len_available),
                     user,
+                    headroom: AF_XDP_RESERVED.try_into().unwrap(),
                 };
             }
 
@@ -453,7 +454,7 @@ impl<'a, T: std::default::Default + std::marker::Copy> SocketTx<'a, T> {
 
             unsafe {
                 let desc = _xsk_ring_prod__tx_desc(self.tx.as_mut(), idx_tx);
-                (*desc).addr = b.addr;
+                (*desc).addr = b.addr + b.headroom as u64;
                 (*desc).len = b.len.try_into().unwrap();
             }
 

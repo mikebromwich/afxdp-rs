@@ -9,10 +9,12 @@ pub struct BufMmap<'a, T>
 where
     T: std::default::Default,
 {
-    /// addr is is the address in the umem area (offset into area)
+    /// addr is is the address in the umem area (offset into area, in front of the headroom)
     pub(crate) addr: u64,
     /// len is the length of the buffer that is valid packet data
     pub(crate) len: u16,
+    /// headroom is the number of bytes in the buffer prior to the packet data
+    pub(crate) headroom: usize,
     /// data is the slice of u8 that contains the packet data
     pub(crate) data: &'a mut [u8],
     /// user is the user defined type
@@ -24,15 +26,23 @@ where
     T: std::default::Default,
 {
     fn get_data(&self) -> &[u8] {
-        &self.data[0..]
+        &self.data[self.headroom..]
     }
 
     fn get_data_mut(&mut self) -> &mut [u8] {
+        &mut self.data[self.headroom..]
+    }
+
+    fn get_data_with_headroom(&self) -> &[u8] {
+        &self.data[0..]
+    }
+
+    fn get_data_with_headroom_mut(&mut self) -> &mut [u8] {
         &mut self.data[0..]
     }
 
     fn get_capacity(&self) -> u16 {
-        u16::try_from(self.data.len()).unwrap()
+        u16::try_from(self.data.len() - self.headroom).unwrap()
     }
 
     fn get_len(&self) -> u16 {
@@ -43,8 +53,15 @@ where
         if len > self.get_capacity() {
             panic!("len too large {} vs {}", len, self.get_capacity());
         }
-
         self.len = len;
+    }
+
+    fn set_headroom(&mut self, headroom: usize) {
+        self.headroom = headroom;
+    }
+
+    fn get_headroom(&self) -> usize {
+        self.headroom
     }
 
     fn get_user(&self) -> &T {
@@ -63,10 +80,11 @@ where
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "BufMMap addr={} len={} capacity={} data={:?}",
+            "BufMMap addr={} len={} capacity={} headroom={} data={:?}",
             self.addr,
             self.len,
             self.get_capacity(),
+            self.headroom,
             &(self.data[0]) as *const u8
         )
     }

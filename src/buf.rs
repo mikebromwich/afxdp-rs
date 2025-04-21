@@ -5,17 +5,29 @@ pub trait Buf<T>
 where
     T: std::default::Default,
 {
-    /// Returns a reference to the u8 slice of the buffer
+    /// Returns a reference to the u8 slice of the buffer excluding any preceding headroom
     fn get_data(&self) -> &[u8];
 
-    /// Returns a mutable reference to the u8 slice of the buffer
+    /// Returns a mutable reference to the u8 slice of the buffer excluding any preceding headroom
     fn get_data_mut(&mut self) -> &mut [u8];
+
+    /// Returns a reference to the u8 slice of the buffer including any preceding headroom
+    fn get_data_with_headroom(&self) -> &[u8];
+
+    /// Returns a mutable reference to the u8 slice of the buffer including any preceding headroom
+    fn get_data_with_headroom_mut(&mut self) -> &mut [u8];
 
     /// Returns the total capacity of the buffer
     fn get_capacity(&self) -> u16;
 
     /// Returns the length of the portion of the buffer that contains packet data
     fn get_len(&self) -> u16;
+
+    /// Sets the number of bytes in the buffer which precede the packet data
+    fn set_headroom(&mut self, headroom: usize);
+
+    /// Returns the number of bytes in the buffer which precede the packet data
+    fn get_headroom(&self) -> usize;
 
     /// Sets the length of the portion of the buffer that is contains packet data
     fn set_len(&mut self, len: u16);

@@ -37,6 +37,14 @@ where
         &mut self.data[0..]
     }
 
+    fn get_data_with_headroom(&self) -> &[u8] {
+        &self.data[0..]
+    }
+
+    fn get_data_with_headroom_mut(&mut self) -> &mut [u8] {
+        &mut self.data[0..]
+    }
+
     fn get_capacity(&self) -> u16 {
         u16::try_from(self.data.capacity()).unwrap()
     }
@@ -47,6 +55,14 @@ where
 
     fn set_len(&mut self, len: u16) {
         self.len = len;
+    }
+
+    fn set_headroom(&mut self, _headroom: usize) {
+        todo!();
+    }
+
+    fn get_headroom(&self) -> usize {
+        0
     }
 
     fn get_user(&self) -> &T {
