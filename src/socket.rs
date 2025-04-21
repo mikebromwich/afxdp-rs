@@ -5,7 +5,6 @@ use std::sync::Arc;
 
 use arraydeque::{ArrayDeque, Wrapping};
 use errno::errno;
-use libbpf_sys::{XDP_FLAGS_DRV_MODE, XDP_FLAGS_REPLACE, XDP_FLAGS_SKB_MODE};
 use libbpf_sys::{
     _xsk_ring_cons__peek, _xsk_ring_cons__release, _xsk_ring_cons__rx_desc,
     _xsk_ring_prod__needs_wakeup, _xsk_ring_prod__reserve, _xsk_ring_prod__submit,
@@ -116,6 +115,7 @@ impl<'a, T: std::default::Default + std::marker::Copy> Socket<'a, T> {
             xdp_flags: XDP_FLAGS_UPDATE_IF_NOEXIST|options.xdp_options,
             bind_flags: XDP_USE_NEED_WAKEUP as u16,
             libbpf_flags: 0,
+            __bindgen_padding_0: Default::default()
         };
 
         if options.zero_copy_mode {
@@ -196,6 +196,7 @@ impl<'a, T: std::default::Default + std::marker::Copy> Socket<'a, T> {
             xdp_flags: XDP_FLAGS_UPDATE_IF_NOEXIST,
             bind_flags: XDP_USE_NEED_WAKEUP as u16,
             libbpf_flags: 0,
+            __bindgen_padding_0: Default::default()
         };
 
         if options.zero_copy_mode {
@@ -270,6 +271,7 @@ impl<'a, T: std::default::Default + std::marker::Copy> Socket<'a, T> {
             xdp_flags: XDP_FLAGS_UPDATE_IF_NOEXIST,
             bind_flags: XDP_USE_NEED_WAKEUP as u16,
             libbpf_flags: 0,
+            __bindgen_padding_0: Default::default()
         };
 
         if options.zero_copy_mode {
