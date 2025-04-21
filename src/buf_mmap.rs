@@ -57,6 +57,9 @@ where
     }
 
     fn set_headroom(&mut self, headroom: usize) {
+        if headroom > self.get_capacity() as usize - self.headroom {
+            panic!("headroom too large headroom {} vs {}", headroom, self.get_capacity() as usize + self.headroom);
+        }
         self.headroom = headroom;
     }
 
