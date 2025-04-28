@@ -21,6 +21,21 @@ where
     pub(crate) user: T,
 }
 
+impl<T> BufMmap<'_, T>
+where
+    T: std::default::Default,
+{
+    pub fn new(addr: u64, len: u16, headroom: usize, data: &mut [u8], user: T) -> BufMmap<T> {
+        BufMmap {
+            addr,
+            len,
+            headroom,
+            data,
+            user,
+        }
+    }
+}
+
 impl<T> Buf<T> for BufMmap<'_, T>
 where
     T: std::default::Default,
@@ -58,7 +73,11 @@ where
 
     fn set_headroom(&mut self, headroom: usize) {
         if headroom > self.get_capacity() as usize - self.headroom {
-            panic!("headroom too large headroom {} vs {}", headroom, self.get_capacity() as usize + self.headroom);
+            panic!(
+                "headroom too large headroom {} vs {}",
+                headroom,
+                self.get_capacity() as usize + self.headroom
+            );
         }
         self.headroom = headroom;
     }
