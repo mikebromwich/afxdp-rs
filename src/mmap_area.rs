@@ -3,8 +3,8 @@ use std::{marker::PhantomData, u64};
 
 use errno::errno;
 use libc::{
-    c_int, c_void, mmap, munmap, MAP_ANONYMOUS, MAP_FAILED, MAP_HUGETLB, MAP_PRIVATE, PROT_READ,
-    PROT_WRITE,
+    c_int, c_void, mlock, mmap, munlock, munmap, MAP_ANONYMOUS, MAP_FAILED, MAP_HUGETLB,
+    MAP_PRIVATE, PROT_READ, PROT_WRITE,
 };
 
 use crate::buf_mmap::BufMmap;
@@ -69,6 +69,10 @@ impl<'a, T: std::default::Default + std::marker::Copy> MmapArea<'a, T> {
                 -1,
                 0,
             );
+
+            if mlock(ptr, buf_num * buf_len) != 0 {
+                return Err(MmapError::Failed);
+            }
         }
 
         if ptr == MAP_FAILED {
@@ -91,6 +95,11 @@ impl<'a, T: std::default::Default + std::marker::Copy> MmapArea<'a, T> {
             unsafe {
                 // addr is the offset into the memory mapped area
                 let addr = (i * buf_len) as u64;
+
+                if (addr%4096)!=0 {
+                    panic!("Addr is not aligned in MmapArea::new()")
+                }
+
                 let ptr = ma.ptr.offset(addr as isize);
 
                 buf = BufMmap::<T> {
@@ -98,7 +107,7 @@ impl<'a, T: std::default::Default + std::marker::Copy> MmapArea<'a, T> {
                     len: 0,
                     data: std::slice::from_raw_parts_mut(ptr as *mut u8, buf_len_available),
                     user: Default::default(),
-                    headroom: AF_XDP_RESERVED.try_into().unwrap()
+                    headroom: AF_XDP_RESERVED.try_into().unwrap(),
                 };
             }
 
@@ -134,6 +143,7 @@ impl<'a, T: std::default::Default + std::marker::Copy> Drop for MmapArea<'a, T> 
         }
 
         unsafe {
+            munlock(self.ptr, self.buf_num * self.buf_len);
             r = munmap(self.ptr, self.buf_num * self.buf_len);
         }
 

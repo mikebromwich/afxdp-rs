@@ -84,6 +84,9 @@ pub struct SocketOptions {
 
     /// Additional XDP options (such as attach mode)
     pub xdp_options: u32,
+
+    /// Whether to use busy polling rather than interrupt mode
+    pub busy_poll_mode: bool,
 }
 
 impl<'a, T: std::default::Default + std::marker::Copy> Socket<'a, T> {
@@ -109,13 +112,19 @@ impl<'a, T: std::default::Default + std::marker::Copy> Socket<'a, T> {
             return Err(SocketNewError::RingNotPowerOfTwo);
         }
 
+        let bind_flags:u16 = if options.busy_poll_mode {
+            0
+        } else {
+            XDP_USE_NEED_WAKEUP as u16
+        };
+
         let mut cfg = xsk_socket_config {
             rx_size: rx_ring_size,
             tx_size: tx_ring_size,
-            xdp_flags: XDP_FLAGS_UPDATE_IF_NOEXIST|options.xdp_options,
-            bind_flags: XDP_USE_NEED_WAKEUP as u16,
+            xdp_flags: XDP_FLAGS_UPDATE_IF_NOEXIST | options.xdp_options,
+            bind_flags,
             libbpf_flags: 0,
-            __bindgen_padding_0: Default::default()
+            __bindgen_padding_0: Default::default(),
         };
 
         if options.zero_copy_mode {
@@ -190,13 +199,19 @@ impl<'a, T: std::default::Default + std::marker::Copy> Socket<'a, T> {
             return Err(SocketNewError::RingNotPowerOfTwo);
         }
 
+        let bind_flags:u16 = if options.busy_poll_mode {
+            0
+        } else {
+            XDP_USE_NEED_WAKEUP as u16
+        };
+
         let mut cfg = xsk_socket_config {
             rx_size: rx_ring_size,
             tx_size: 0,
             xdp_flags: XDP_FLAGS_UPDATE_IF_NOEXIST,
-            bind_flags: XDP_USE_NEED_WAKEUP as u16,
+            bind_flags,
             libbpf_flags: 0,
-            __bindgen_padding_0: Default::default()
+            __bindgen_padding_0: Default::default(),
         };
 
         if options.zero_copy_mode {
@@ -265,13 +280,19 @@ impl<'a, T: std::default::Default + std::marker::Copy> Socket<'a, T> {
             return Err(SocketNewError::RingNotPowerOfTwo);
         }
 
+        let bind_flags:u16 = if options.busy_poll_mode {
+            0
+        } else {
+            XDP_USE_NEED_WAKEUP as u16
+        };
+
         let mut cfg = xsk_socket_config {
             rx_size: 0,
             tx_size: tx_ring_size,
             xdp_flags: XDP_FLAGS_UPDATE_IF_NOEXIST,
-            bind_flags: XDP_USE_NEED_WAKEUP as u16,
+            bind_flags,
             libbpf_flags: 0,
-            __bindgen_padding_0: Default::default()
+            __bindgen_padding_0: Default::default(),
         };
 
         if options.zero_copy_mode {

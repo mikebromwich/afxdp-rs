@@ -26,6 +26,9 @@ where
     T: std::default::Default,
 {
     pub fn new(addr: u64, len: u16, headroom: usize, data: &mut [u8], user: T) -> BufMmap<T> {
+        if (addr % 4096) != 0 {
+            panic!("Addr is not aligned in BufMmap::new()");
+        }
         BufMmap {
             addr,
             len,
