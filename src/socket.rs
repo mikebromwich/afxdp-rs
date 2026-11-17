@@ -1,6 +1,8 @@
 use std::cmp::min;
 use std::convert::TryInto;
 use std::ffi::CString;
+use std::io;
+use std::os::fd::RawFd;
 use std::sync::Arc;
 
 use arraydeque::{ArrayDeque, Wrapping};
@@ -34,7 +36,7 @@ pub struct Socket<'a, T: std::default::Default + std::marker::Copy> {
 #[derive(Debug)]
 pub struct SocketRx<'a, T: std::default::Default + std::marker::Copy> {
     socket: Arc<Socket<'a, T>>,
-    fd: std::os::raw::c_int,
+    pub fd: std::os::raw::c_int,
     rx: Box<xsk_ring_cons>,
 }
 // SocketRx is not Send by default because of the *mut u32 in xsk_ring_cons. According to the Rustonomicon,
@@ -112,7 +114,7 @@ impl<'a, T: std::default::Default + std::marker::Copy> Socket<'a, T> {
             return Err(SocketNewError::RingNotPowerOfTwo);
         }
 
-        let bind_flags:u16 = if options.busy_poll_mode {
+        let bind_flags: u16 = if options.busy_poll_mode {
             0
         } else {
             XDP_USE_NEED_WAKEUP as u16
@@ -165,6 +167,13 @@ impl<'a, T: std::default::Default + std::marker::Copy> Socket<'a, T> {
             )));
         }
 
+        if options.busy_poll_mode {
+            let fd = unsafe { xsk_socket__fd(xsk) };
+            if let Err(e) = enable_preferred_busy_poll(fd) {
+                return Err(SocketNewError::Create(e));
+            }
+        }
+
         let arc = Arc::new(Socket {
             umem,
             socket: unsafe { Box::from_raw(*xsk_ptr) },
@@ -199,7 +208,7 @@ impl<'a, T: std::default::Default + std::marker::Copy> Socket<'a, T> {
             return Err(SocketNewError::RingNotPowerOfTwo);
         }
 
-        let bind_flags:u16 = if options.busy_poll_mode {
+        let bind_flags: u16 = if options.busy_poll_mode {
             0
         } else {
             XDP_USE_NEED_WAKEUP as u16
@@ -251,6 +260,13 @@ impl<'a, T: std::default::Default + std::marker::Copy> Socket<'a, T> {
             )));
         }
 
+        if options.busy_poll_mode {
+            let fd = unsafe { xsk_socket__fd(xsk) };
+            if let Err(e) = enable_preferred_busy_poll(fd) {
+                return Err(SocketNewError::Create(e));
+            }
+        }
+
         let arc = Arc::new(Socket {
             umem,
             socket: unsafe { Box::from_raw(*xsk_ptr) },
@@ -280,7 +296,7 @@ impl<'a, T: std::default::Default + std::marker::Copy> Socket<'a, T> {
             return Err(SocketNewError::RingNotPowerOfTwo);
         }
 
-        let bind_flags:u16 = if options.busy_poll_mode {
+        let bind_flags: u16 = if options.busy_poll_mode {
             0
         } else {
             XDP_USE_NEED_WAKEUP as u16
@@ -332,6 +348,13 @@ impl<'a, T: std::default::Default + std::marker::Copy> Socket<'a, T> {
             )));
         }
 
+        if options.busy_poll_mode {
+            let fd = unsafe { xsk_socket__fd(xsk) };
+            if let Err(e) = enable_preferred_busy_poll(fd) {
+                return Err(SocketNewError::Create(e));
+            }
+        }
+
         let arc = Arc::new(Socket {
             umem,
             socket: unsafe { Box::from_raw(*xsk_ptr) },
@@ -346,6 +369,34 @@ impl<'a, T: std::default::Default + std::marker::Copy> Socket<'a, T> {
 
         Ok((arc, tx))
     }
+}
+
+// Values for x86_64 / aarch64 (asm-generic). SPARC, PA-RISC, Alpha and MIPS differ.
+const SO_BUSY_POLL: libc::c_int = 46;
+const SO_PREFER_BUSY_POLL: libc::c_int = 69;
+const SO_BUSY_POLL_BUDGET: libc::c_int = 70;
+
+fn set_sockopt_int(fd: RawFd, opt: libc::c_int, val: libc::c_int) -> io::Result<()> {
+    let ret = unsafe {
+        libc::setsockopt(
+            fd,
+            libc::SOL_SOCKET,
+            opt,
+            &val as *const _ as *const libc::c_void,
+            std::mem::size_of::<libc::c_int>() as libc::socklen_t,
+        )
+    };
+    if ret != 0 {
+        return Err(io::Error::last_os_error());
+    }
+    Ok(())
+}
+
+pub fn enable_preferred_busy_poll(fd: RawFd) -> io::Result<()> {
+    set_sockopt_int(fd, SO_PREFER_BUSY_POLL, 1)?; // prefer busy polling over IRQ-driven NAPI
+    set_sockopt_int(fd, SO_BUSY_POLL, 20)?; // µs to busy-poll per syscall
+    set_sockopt_int(fd, SO_BUSY_POLL_BUDGET, 64)?; // packets NAPI may process per busy-poll
+    Ok(())
 }
 
 impl<'a, T: std::default::Default + std::marker::Copy> Drop for Socket<'a, T> {

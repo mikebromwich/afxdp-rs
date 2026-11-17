@@ -96,7 +96,7 @@ impl<'a, T: std::default::Default + std::marker::Copy> MmapArea<'a, T> {
                 // addr is the offset into the memory mapped area
                 let addr = (i * buf_len) as u64;
 
-                if (addr%4096)!=0 {
+                if (addr % 4096) != 0 {
                     panic!("Addr is not aligned in MmapArea::new()")
                 }
 
@@ -143,13 +143,16 @@ impl<'a, T: std::default::Default + std::marker::Copy> Drop for MmapArea<'a, T> 
         }
 
         unsafe {
-            munlock(self.ptr, self.buf_num * self.buf_len);
+            //munlock(self.ptr, self.buf_num * self.buf_len);
             r = munmap(self.ptr, self.buf_num * self.buf_len);
         }
 
         if r != 0 {
             let errno = errno().0;
-            println!("munmap failed errno: {}", errno);
+            println!(
+                "munmap failed errno: {} buf_num: {} buf_len: {} ptr:{:?}",
+                errno, self.buf_num, self.buf_len, self.ptr
+            )
         }
     }
 }
